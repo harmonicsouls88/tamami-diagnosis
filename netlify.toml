@@ -1,0 +1,7 @@
+[dev]
+publish = "."
+functions = "netlify/functions"
+autoLaunch = false
+
+[functions]
+node_bundler = "esbuild"

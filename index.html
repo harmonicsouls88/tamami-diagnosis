@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>たまみ式・波動コンパス診断</title>
+  <style>
+    :root{
+      --bg1:#fce7f3; --bg2:#f9a8d4; --bg3:#f5d0fe;
+      --card:#ffffff; --ink:#1f2937; --muted:#64748b; --line:#f1e6ef;
+      --acc:#f0abfc; --acc2:#f9a8d4;
+      --ok:#10b981; --err:#ef4444;
+    }
+    html,body{
+      margin:0;height:100%;
+      font-family:'Hiragino Sans',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:var(--ink);
+      background:
+        radial-gradient(1200px 800px at 10% 0%,rgba(255,255,255,.2),transparent),
+        linear-gradient(135deg,var(--bg1),var(--bg2) 45%,var(--bg3));
+    }
+    .wrap{max-width:920px;margin:48px auto;padding:0 20px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px 24px 28px;box-shadow:0 12px 40px rgba(24,39,75,.12)}
+    h1{margin:0 0 4px;font-size:clamp(22px,3.2vw,30px);letter-spacing:.2px}
+    .sub{margin:0 0 14px;color:var(--muted)}
+    .q{padding:14px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;margin-bottom:10px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    
+/* 共通グリッド */
+.grid{ display:grid; gap:12px; }
+
+/* 2カラムのフォームレイアウト（最小260pxを確保） */
+.two{
+  display:grid;
+  gap:16px;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));}
+.two > * { min-width: 0; } /* はみ出し防止 */
+
+/* 画面が狭い時は1カラムに落とす */
+@media (max-width: 800px){.two{ grid-template-columns: 1fr; }}
+
+/* 入力はボーダーやパディング込みで幅計算（ここだけでOK） */
+input, select, textarea{
+  width:100%;
+  box-sizing:border-box;
+  background:#ffffff;
+  border:1px solid var(--line);
+  color:var(--ink);
+  padding:12px;
+  border-radius:12px;}
+
+label{display:block;margin-bottom:6px;color:#334155}
+    .pill{padding:10px 14px;border:2px solid var(--line);background:#fff;border-radius:999px;cursor:pointer;font-weight:700;letter-spacing:.2px;min-width:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+    .pill::before{content:"";width:16px;height:16px;border-radius:999px;border:2px solid var(--acc);display:inline-block;box-shadow:0 0 0 2px rgba(99,102,241,.15)}
+    .pill.active{border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.2) inset,0 0 0 1px rgba(99,102,241,.15)}
+    .pill.active::before{background:var(--acc);border-color:var(--acc)}
+    .pill:hover{border-color:var(--acc)}
+    .bar{height:10px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#eef2ff}
+    .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+    .btn{appearance:none;border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#ffffff;box-shadow:0 6px 14px rgba(129,140,248,.18)}
+    .btn.primary:hover{filter:brightness(1.03)}
+    small,.muted{color:var(--muted)}
+    .tag{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;color:#4f46e5}
+    .hr{height:1px;background:var(--line);margin:16px 0}
+    .hidden{display:none}
+    .toast{position:fixed;right:16px;bottom:16px;background:#ffffff;border:1px solid var(--line);border-left:6px solid var(--ok);color:#065f46;padding:10px;border-radius:12px;box-shadow:0 10px 30px rgba(24,39,75,.14)}
+    .toast.err{border-left-color:var(--err);color:#7f1d1d}
+
+    /* ヘッダーロゴ */
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+    .brand img{height:88px;width:auto;display:block}
+    .brand b{font-weight:800;letter-spacing:.3px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <!-- ロゴ + タイトル -->
+    <div class="brand">
+      <img id="brand_logo" alt="Tamami" src="https://tamami-diagnosis9.netlify.app/tamami.png">
+      <b>たまみ式・波動コンパス診断</b>
+    </div>
+    <p class="sub">あなたとお相手の“波動の向き”を読み解き、調和の流れを整えます。<br>画面はサマリーのみ、詳しい相性と九星リーディングはメールでお届けします。</p>
+
+    <!-- 設定（?admin=1 で表示） -->
+    <details id="dev_settings" style="margin-bottom:10px; display:none">
+      <summary><b>設定（クリックで開閉）</b> <span class="muted">MakeのWebhookとサンキューページURLを入力してください</span></summary>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+        <div>
+          <label>Make Webhook URL</label>
+          <input id="hook" placeholder="https://hook.integromat.com/xxxxx" />
+        </div>
+        <div>
+          <label>サンキューページURL（送信後に遷移）</label>
+          <input id="thanks" placeholder="https://tamamithankspage.netlify.app" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px"><label class="row" style="gap:6px"><input type="checkbox" id="thanks_query" checked/> 主要結果をクエリに付与する</label></div>
+    </details>
+
+    <!-- 入力フォーム：幅が被らない固定グリッド -->
+    <section id="me" class="q">
+      <div class="grid two">
+        <div><label>お名前（必須）</label><input id="name" required placeholder="山田 花子"/></div>
+        <div><label>メール（必須）</label><input id="email" type="email" required placeholder="example@mail.com"/></div>
+        <div><label>生年月日（必須）</label><input id="dob" type="date" required/></div>
+        <div><label>出生地（任意）</label><input id="birthplace" placeholder="東京都"/></div>
+      </div>
+    </section>
+
+    <section id="twin" class="q">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <b>💞 ツインソウル拡張モード</b>
+        <label class="row" style="gap:6px"><input type="checkbox" id="use_twin"/> 相手の生年月日を入力する（相性コメントはメールのみ）</label>
+      </div>
+      <div id="twin_fields" class="grid hidden" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+        <div><label>お相手のお名前（任意）</label><input id="p_name" placeholder="相手 名前"/></div>
+        <div><label>お相手 生年月日（相性を出すには必須）</label><input id="p_dob" type="date"/></div>
+      </div>
+      <small class="muted">※ 画面にはお相手の詳細表示はありません。メールでのみお知らせします。</small>
+    </section>
+
+    <div class="hr"></div>
+
+    <h3>設問（1～15）</h3>
+    <p class="muted">1=ほとんどない ／ 2=ときどきある ／ 3=どちらとも言えない ／ 4=よくある ／ 5=ほぼいつも</p>
+    <div id="questions"></div>
+
+    <div class="hr"></div>
+
+    <!-- ちら見せ -->
+    <section class="q">
+      <div class="row" style="justify-content:space-between"><b>結果（ちら見せ）</b><span class="muted">※ 詳細はメールにて</span></div>
+      <div id="bars_self" class="grid"></div>
+      <div id="sum_self" class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap"></div>
+      <div class="row" style="gap:8px;margin-top:6px"><span class="tag" id="self_kyusei">九星：—（詳細はメール）</span></div>
+    </section>
+
+    <div class="row" style="justify-content:center;margin-top:14px;gap:10px;flex-wrap:wrap">
+      <button class="btn primary" id="do_send">💌 メールで続きを受け取る</button>
+    </div>
+    <div style="text-align:center;margin-top:8px"><small>数分後にメールが届きます。届かない場合は迷惑メールをご確認ください。</small></div>
+
+    <!-- 既定値（公開用） -->
+    <input type="hidden" id="__hook_default" value="https://hook.us2.make.com/gf96eebmnzoajzhd6vdztkarh1yh4ets">
+    <input type="hidden" id="__thanks_default" value="https://tamamithankspage.netlify.app/">
+  </div>
+</div>
+
+<script src="app.clean.js"></script>
+</body>
+</html>
