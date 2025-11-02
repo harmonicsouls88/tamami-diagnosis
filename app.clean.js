@@ -483,7 +483,14 @@ function redirectAfter(pay){
     if(pay.partner && pay.partner.enabled && pay.kyusei && pay.kyusei.partner && pay.kyusei.partner.label) p.set('honmei_partner', pay.kyusei.partner.label);
     dest += (url.indexOf('?')>=0?'&':'?') + p.toString();
   }
-  location.assign(dest);
+
+  // ← ここで back を付ける
+  var here = location.origin + location.pathname;
+  var u = new URL(dest, location.origin);
+  u.searchParams.set('back', here);
+
+  // ★ 修正ポイント：u に飛ばす
+  location.assign(u.toString());
 }
 
 /* ===== 初期化 ===== */
